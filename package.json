@@ -1,0 +1,25 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@cornerstonejs/core": "^4.3.14",
+    "@cornerstonejs/dicom-image-loader": "^4.3.14",
+    "@cornerstonejs/polymorphic-segmentation": "^4.3.14",
+    "@cornerstonejs/tools": "^4.3.14",
+    "@originjs/vite-plugin-commonjs": "^1.0.3"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
