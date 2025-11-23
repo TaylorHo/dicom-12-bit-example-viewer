@@ -6,20 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "patch-package"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "@cornerstonejs/core": "^4.3.14",
-    "@cornerstonejs/dicom-image-loader": "^4.3.14",
-    "@cornerstonejs/polymorphic-segmentation": "^4.3.14",
-    "@cornerstonejs/tools": "^4.3.14",
+    "@cornerstonejs/core": "^4.12.2",
+    "@cornerstonejs/dicom-image-loader": "^4.12.2",
+    "@cornerstonejs/polymorphic-segmentation": "^4.12.2",
+    "@cornerstonejs/tools": "^4.12.2",
     "@originjs/vite-plugin-commonjs": "^1.0.3"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "patch-package": "^8.0.1",
+    "vite": "^7.2.4"
   }
 }

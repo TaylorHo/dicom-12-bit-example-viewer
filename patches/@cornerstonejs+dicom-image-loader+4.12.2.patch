@@ -1,0 +1,143 @@
+diff --git a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/imageLoader/wadouri/getUncompressedImageFrame.js b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/imageLoader/wadouri/getUncompressedImageFrame.js
+index 062e26f..1a04590 100644
+--- a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/imageLoader/wadouri/getUncompressedImageFrame.js
++++ b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/imageLoader/wadouri/getUncompressedImageFrame.js
+@@ -21,6 +21,26 @@ function getUncompressedImageFrame(dataSet, frameIndex) {
+         }
+         return new Uint8Array(dataSet.byteArray.buffer.slice(frameOffset, frameOffset + pixelsPerFrame));
+     }
++    else if (bitsAllocated === 12) {
++        const bytesPerFrame = Math.ceil((pixelsPerFrame * 12) / 8);
++        frameOffset = pixelDataOffset + frameIndex * bytesPerFrame;
++        if (frameOffset + bytesPerFrame > dataSet.byteArray.length) {
++            throw new Error('frame exceeds size of pixelData');
++        }
++        const pixelData = new Uint16Array(pixelsPerFrame);
++        let byteOffset = frameOffset;
++        let pixelIndex = 0;
++        while (pixelIndex < pixelsPerFrame) {
++            const byte0 = dataSet.byteArray[byteOffset++] || 0;
++            const byte1 = dataSet.byteArray[byteOffset++] || 0;
++            const byte2 = dataSet.byteArray[byteOffset++] || 0;
++            pixelData[pixelIndex++] = byte0 | ((byte1 & 0x0f) << 8);
++            if (pixelIndex < pixelsPerFrame) {
++                pixelData[pixelIndex++] = (byte1 >> 4) | (byte2 << 4);
++            }
++        }
++        return new Uint8Array(pixelData.buffer);
++    }
+     else if (bitsAllocated === 16) {
+         frameOffset = pixelDataOffset + frameIndex * pixelsPerFrame * 2;
+         if (frameOffset >= dataSet.byteArray.length) {
+diff --git a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeBigEndian.js b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeBigEndian.js
+index 53a88d2..afff369 100644
+--- a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeBigEndian.js
++++ b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeBigEndian.js
+@@ -2,7 +2,7 @@ function swap16(val) {
+     return ((val & 0xff) << 8) | ((val >> 8) & 0xff);
+ }
+ async function decodeBigEndian(imageFrame, pixelData) {
+-    if (imageFrame.bitsAllocated === 16) {
++    if (imageFrame.bitsAllocated === 16 || imageFrame.bitsAllocated === 12) {
+         let arrayBuffer = pixelData.buffer;
+         let offset = pixelData.byteOffset;
+         const length = pixelData.length;
+diff --git a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGBaseline12Bit-js.js b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGBaseline12Bit-js.js
+index 19649c7..6921468 100644
+--- a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGBaseline12Bit-js.js
++++ b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGBaseline12Bit-js.js
+@@ -28,7 +28,7 @@ async function decodeJPEGBaseline12BitAsync(imageFrame, pixelData) {
+         imageFrame.pixelData = jpeg.getData(imageFrame.columns, imageFrame.rows);
+         return imageFrame;
+     }
+-    else if (imageFrame.bitsAllocated === 16) {
++    else if (imageFrame.bitsAllocated === 16 || imageFrame.bitsAllocated === 12) {
+         imageFrame.pixelData = jpeg.getData16(imageFrame.columns, imageFrame.rows);
+         return imageFrame;
+     }
+diff --git a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGLossless.js b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGLossless.js
+index 7542729..562af4c 100644
+--- a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGLossless.js
++++ b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeJPEGLossless.js
+@@ -24,7 +24,7 @@ async function decodeJPEGLossless(imageFrame, pixelData) {
+     const buffer = pixelData.buffer;
+     const decompressedData = decoder.decode(buffer, pixelData.byteOffset, pixelData.length, byteOutput);
+     if (imageFrame.pixelRepresentation === 0) {
+-        if (imageFrame.bitsAllocated === 16) {
++        if (imageFrame.bitsAllocated === 16 || imageFrame.bitsAllocated === 12) {
+             imageFrame.pixelData = new Uint16Array(decompressedData.buffer);
+             return imageFrame;
+         }
+diff --git a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeLittleEndian.js b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeLittleEndian.js
+index 7ade1b1..782a10e 100644
+--- a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeLittleEndian.js
++++ b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeLittleEndian.js
+@@ -2,7 +2,7 @@ async function decodeLittleEndian(imageFrame, pixelData) {
+     let arrayBuffer = pixelData.buffer;
+     let offset = pixelData.byteOffset;
+     const length = pixelData.length;
+-    if (imageFrame.bitsAllocated === 16) {
++    if (imageFrame.bitsAllocated === 16 || imageFrame.bitsAllocated === 12) {
+         if (offset % 2) {
+             arrayBuffer = arrayBuffer.slice(offset);
+             offset = 0;
+diff --git a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeRLE.js b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeRLE.js
+index f1413b9..dae1f1c 100644
+--- a/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeRLE.js
++++ b/node_modules/@cornerstonejs/dicom-image-loader/dist/esm/shared/decoders/decodeRLE.js
+@@ -8,6 +8,9 @@ async function decodeRLE(imageFrame, pixelData) {
+     else if (imageFrame.bitsAllocated === 16) {
+         return decode16(imageFrame, pixelData);
+     }
++    else if (imageFrame.bitsAllocated === 12) {
++        return decode12(imageFrame, pixelData);
++    }
+     throw new Error('unsupported pixel format for RLE');
+ }
+ function decode8(imageFrame, pixelData) {
+@@ -125,4 +128,45 @@ function decode16(imageFrame, pixelData) {
+     }
+     return imageFrame;
+ }
++function decode12(imageFrame, pixelData) {
++    const frameData = pixelData;
++    const frameSize = imageFrame.rows * imageFrame.columns;
++    const outFrame = new ArrayBuffer(frameSize * imageFrame.samplesPerPixel * 2);
++    const header = new DataView(frameData.buffer, frameData.byteOffset);
++    const data = new Int8Array(frameData.buffer, frameData.byteOffset);
++    const out = new Int8Array(outFrame);
++    const numSegments = header.getInt32(0, true);
++    for (let s = 0; s < numSegments; ++s) {
++        let outIndex = 0;
++        const highByte = s === 0 ? 1 : 0;
++        let inIndex = header.getInt32((s + 1) * 4, true);
++        let maxIndex = header.getInt32((s + 2) * 4, true);
++        if (maxIndex === 0) {
++            maxIndex = frameData.length;
++        }
++        while (inIndex < maxIndex) {
++            const n = data[inIndex++];
++            if (n >= 0 && n <= 127) {
++                for (let i = 0; i < n + 1 && outIndex < frameSize; ++i) {
++                    out[outIndex * 2 + highByte] = data[inIndex++];
++                    outIndex++;
++                }
++            }
++            else if (n <= -1 && n >= -127) {
++                const value = data[inIndex++];
++                for (let j = 0; j < -n + 1 && outIndex < frameSize; ++j) {
++                    out[outIndex * 2 + highByte] = value;
++                    outIndex++;
++                }
++            }
++        }
++    }
++    if (imageFrame.pixelRepresentation === 0) {
++        imageFrame.pixelData = new Uint16Array(outFrame);
++    }
++    else {
++        imageFrame.pixelData = new Int16Array(outFrame);
++    }
++    return imageFrame;
++}
+ export default decodeRLE;
